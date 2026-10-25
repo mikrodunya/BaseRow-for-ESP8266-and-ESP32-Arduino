@@ -16,7 +16,7 @@
 
 class BaserowMCU {
   public:
-    BaserowMCU(String tableId, String apiToken, String baseUrl = "https://baserow.io");
+    BaserowMCU(String tableId, String apiToken, String baseUrl = "https://api.baserow.io");
     
     // Veri gönderme fonksiyonları
     bool insertNumber(String fieldName, float value);
