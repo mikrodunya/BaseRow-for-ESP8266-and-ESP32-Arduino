@@ -1,167 +1,122 @@
-# BaserowMCU 🚀
+# BaserowMCU 1.6.0 — ESP32 / ESP8266
 
-BaserowMCU, **ESP32** ve **ESP8266** tabanlı mikrodenetleyicilerinizin açık kaynaklı no-code veritabanı platformu [Baserow](https://baserow.io) ile doğrudan REST API üzerinden iletişim kurmasını sağlayan; hafif, kararlı ve kullanımı son derece pratik bir Arduino kütüphanesidir.
+ESP32 ve ESP8266 Arduino kartları için hızlandırılmış Baserow istemcisi.
+Kaynak: https://github.com/mikrodunya/BaseRow-for-ESP8266-and-ESP32-Arduino
 
----
+## Kurulum
 
-## ✨ Özellikler
+Arduino IDE > Sketch / Taslak > Include Library / Kütüphane Ekle > Add .ZIP Library
+ile BaserowMCU-1.6.0.zip dosyasını ekleyin. Eski BaserowMCU sürümünün yedeğini alın;
+IDE aynı adlı kütüphane nedeniyle kurulumu reddederse önce eski klasörü taşıyın.
+ArduinoJson 7 veya üzeri gerekir. Araçlar > Kart menüsünden kullandığınız kartı seçin.
+Kütüphane bu seçime göre ESP32 / ESP8266 kodunu otomatik derler; ek bir ayar veya
+WiFi include değişikliği gerekmez. Bilgisayara takılan kartın modelini kendisi
+keşfetmez; Arduino IDE'de doğru kartı seçmek yine gereklidir.
 
-- **🔢 Doğrudan Satır Okuma Desteği (v1.5.0):** Yazılım dünyasındaki 0'dan başlama (sıfır tabanlı indeks) karmaşası kaldırılmıştır. Baserow web arayüzünde gördüğünüz satır numarası (1, 2, 3...) neyse, fonksiyonlara doğrudan o numarayı yazarak veri okuyabilirsiniz.
-- **📦 Sıfır JSON Karmaşası:** Ana kodunuzun içinde karmaşık JSON string birleştirmeleri, kaçış karakterleri (`\"`) veya kütüphane nesneleri görmezsiniz. Verilerinizi doğrudan `float` veya `String` olarak iletebilirsiniz.
-- **🔄 Çift Yönlü İletişim (POST / PATCH / GET):** Veritabanına sadece veri yazmakla (Log kaydı tutma) kalmaz, mevcut bir satırın üzerine yazarak güncelleyebilir (Canlı panel ekranı gibi) veya tablodaki verileri geri okuyabilirsiniz.
-- **🔒 Güvenli Tasarım:** Projenizi GitHub'a yüklerken Wi-Fi şifrenizi, Table ID'nizi veya API Token'ınızı kodun içine gömmek zorunda kalmazsınız. Örnek kodlar tamamen şifrelerden arındırılmıştır.
-- **🛡️ Sıkı STA Modu Güvencesi:** Kütüphane, canlı ortamlarda (field) IP çakışmalarını veya kilitlenmeleri önlemek için kartı sıkı bir şekilde `WIFI_STA` (İstemci) modunda tutar ve ağ kesintilerinde otomatik askıya alma algoritmasıyla çalışır.
+Dosya > Örnekler > BaserowMCU > Baserow_Example örneğini açın. WiFi, table ID,
+database token ve gerçek ROW_ID değerlerini girin. Örnek mevcut satırdaki
+Ruzgar_Hizi ve Hava_Kalitesi alanlarını değiştirir. Önce test tablosu kullanın.
 
----
+## Hız değişiklikleri
 
-## 🔌 Donanım Uyumluluğu (Supported Hardware)
+- HTTPClient ve WiFiClientSecure nesneleri istekler arasında korunur.
+- HTTP keep-alive varsayılan açıktır; sunucu izin verdiğinde aynı TCP/TLS bağlantısı kullanılır.
+- Yazma yanıtları da tamamen tüketilir; okunmamış JSON sonraki isteğe karışmaz.
+- ESP8266'da sunucunun desteklediği durumlarda BearSSL TLS oturumu yeniden kullanılır.
+- readRow gerçek ID ile yalnızca bir satır getirir. Dönen belgeden birçok alanı okuyabilirsiniz.
+- insertRow / updateRow aynı satırın tüm alanlarını bir POST / PATCH içinde yollar.
+- Eski readNumber / readText artık size=1&page=N ile tek satır ister.
+- Eski fonksiyonlar için isteğe bağlı önbellek vardır; varsayılan kapalıdır.
+- Örnekte uzun delay yerine millis zamanlaması vardır. HTTP çağrıları hâlâ senkrondur.
 
-Bu kütüphane, yerleşik Wi-Fi modülü bulunan ve HTTPS (SSL/TLS) el sıkışması yapabilecek yeterli bellek kapasitesine sahip **32-bit mimariler** için tasarlanmıştır.
+Beş alanı ayrı ayrı yazmak yerine updateRow kullanmak istek sayısını 5'ten 1'e
+indirir. Bu, süre için 5 kat hız garantisi değildir. İlk TLS bağlantısı, WiFi,
+sunucu gecikmesi ve satır boyutu süreyi etkiler. Sunucu boşta kalan bağlantıyı
+kapatabilir; sonraki istek yeniden bağlanır.
 
-| Mikrodenetleyici Ailesi | Örnek Geliştirme Kartları | Wi-Fi Desteği | SSL/TLS (HTTPS) Güvenliği | Durum |
-| :--- | :--- | :--- | :--- | :--- |
-| **ESP32 Serisi** | ESP32-WROOM-32, ESP32-S2, ESP32-S3, ESP32-C3, NodeMCU-32S | Yerleşik (Native) | Donanımsal Kripto Hızlandırma | ✅ Tam Uyumlu |
-| **ESP8266 Serisi** | NodeMCU V2/V3, WeMos D1 Mini, ESP-01S | Yerleşik (Native) | Yazılımsal Güvenlik (RAM sınırına dikkat) | ✅ Tam Uyumlu |
+## Yeni API
 
-> ⚠️ **Önemli Not:** Arduino Uno, Nano veya Mega gibi klasik 8-bit kartlar **yerleşik Wi-Fi modülüne ve şifreli HTTPS trafiğini yönetebilecek donanıma sahip olmadıkları için** bu kütüphaneyi doğrudan desteklemez.
-
----
-
-## 📚 Kütüphane Bağımlılıkları (Dependencies)
-
-Kütüphanenin hatasız derlenebilmesi için Arduino IDE'nize şu bağımlılığın kurulması gerekir:
-1. **ArduinoJson (Sürüm 7.x veya üzeri):** Baserow API'sinden dönen JSON şemalarını arka planda ayrıştırmak ve sunucuya veri paketlemek için kullanılır.
-   - *Nasıl Kurulur?:* Arduino IDE > Araçlar > Kütüphaneleri Yönet (Library Manager) bölümünden **"ArduinoJson"** aratın ve Benoit Blanchon tarafından yazılan güncel sürümü kurun.
-
----
-
-## 🔑 Baserow API Kimlik Bilgilerini Alma (How to Get ID & Token)
-
-### 1. Database Token (API Anahtarı) Oluşturma
-1. Baserow hesabınıza giriş yapın.
-2. Sol üst köşedeki **Workspace (Çalışma Alanı)** adınıza tıklayıp **My Settings** menüsüne gidin.
-3. Sol menüden **Database tokens** sekmesine tıklayın ve **Create token +** butonuna basın.
-4. Bir isim verip çalışma alanınızı seçerek token'ı oluşturun.
-5. **Kritik Adım:** Oluşturulan token satırının sağındaki üç noktaya (**⋮**) tıklayın, **Show databases** deyin ve ilgili veritabanınız için **Yazma ve Okuma (Write / Read)** yetkilerini kesinlikle aktifleştirin.
-
-### 2. Table ID (Tablo Numarası) Bulma
-- Tarayıcı adres çubundaki URL'de yer alan `/table/` ibaresinden sonraki sayı sizin Table ID'nizdir. 
-  *(Örn: `.../database/12/table/3456/` ise Table ID **3456**'dır).*
-
----
-
-## 📊 Desteklenen Veri Tipleri Özeti
-
-| Arduino Türü | Baserow Kolon Tipi | Açıklama |
-| :--- | :--- | :--- |
-| `float` / `int` | **Number** (Sayı) | Sensör değerleri, sayaçlar, ondalıklı veriler. |
-| `String` / `const char*` | **Text** (Metin) | Cihaz durumları, hata logları, sözel bildirimler. |
-| `bool` (`true`/`false`) | **Boolean** (Checkbox) | `updateNumber` ile `1` (İşaretli) veya `0` (Boş) olarak yönetilir. |
-
----
-
-## 🚀 Güvenli Örnek Kullanım (Safe Example Code)
-
-Baserow üzerinde **`Ruzgar_Hizi` (Sayı)**, **`Hava_Kalitesi` (Metin)** ve **`LED_Komut` (Sayı)** kolonlarını elinizle oluşturun. Tablonuza test için **en az bir adet boş satır (Row ID: 1)** ekleyin. 
-
-Aşağıdaki kodu kartınıza yüklemeden önce kendi ağ ve API bilgilerinizi `YOUR_` ile başlayan ilgili yerlere yazın. Kodu GitHub'a bu haliyle yüklediğinizde hiçbir şifreniz internete sızmaz:
-
-```cpp
-#include <WiFi.h> // ESP8266 için: #include <ESP8266WiFi.h>
+~~~cpp
 #include <BaserowMCU.h>
+BaserowMCU baserow("TABLE_ID", "DATABASE_TOKEN");
 
-// 🔒 KODDA HİÇBİR YERDE GERÇEK ŞİFRENİZ BARINMAZ (Yüklemeden önce doldurun)
-const char* ssid     = "YOUR_WIFI_SSID";
-const char* password = "YOUR_WIFI_PASSWORD";
+// setup içinde WiFi bağlantısını başlatın.
+// Aşağıdaki işlemleri bağlantı kurulduktan sonra yapın:
+JsonDocument fields;
+fields["Sicaklik"] = 23.5;
+fields["Nem"] = 48;
+fields["Durum"] = "NORMAL";
+bool ok = baserow.updateRow(42, fields); // Tek PATCH, gerçek ID=42.
+// baserow.insertRow(fields); // Tek POST, üç alanlı TEK yeni satır.
 
-// Baserow Bağlantısı (Table ID ve Database Token)
-BaserowMCU baserow("YOUR_TABLE_ID", "YOUR_DATABASE_TOKEN");
-
-const int LED_PIN = 2; // Durum kontrol LED'i
-
-void setup() {
-  Serial.begin(115200);
-  pinMode(LED_PIN, OUTPUT);
-  WiFi.disconnect(true); // Önceki hatalı bağlantı kalıntılarını temizle
-  delay(1000);
-  WiFi.mode(WIFI_STA);   // Sadece Station (İstemci) modu aktif
-  WiFi.begin(ssid, password);
-  
-  while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
-  Serial.println("\nWiFi Bağlantısı Başarılı!");
+JsonDocument row;
+if (baserow.readRow(42, row)) { // Tek GET.
+  float sicaklik = row["Sicaklik"].as<float>();
+  String durum = row["Durum"].as<String>();
 }
+~~~
 
-void loop() {
-  float anlikRuzgar = 12.4 + (random(0, 100) / 10.0);
-  String anlikDurum = (anlikRuzgar > 18.0) ? "FIRTINA" : "NORMAL";
+readRow çıktısını hata durumunda temizler. insertRow ve updateRow bool döndürür;
+POST sonucundaki yeni ID bu sürümde dışarıya verilmez.
 
-  Serial.println("\n==================================================");
-  Serial.println("📂 YENİ SATIR EKLEME (JSON KULLANMADAN)");
-  Serial.println("==================================================");
-  
-  if (baserow.insertNumber("Ruzgar_Hizi", anlikRuzgar)) {
-    Serial.println("-> Başarılı: Yeni rüzgar hızı satırı eklendi.");
-  }
-  if (baserow.insertText("Hava_Kalitesi", anlikDurum + "_LOG")) {
-    Serial.println("-> Başarılı: Yeni günlük metin satırı eklendi.");
-  }
+## Eski kodlarla kullanım
 
-  delay(2000);
+insertNumber, insertText, updateNumber, updateText, readNumber ve readText korunmuştur.
+Her insertNumber / insertText hâlâ AYRI bir satır ekler. Aynı satırdaki alanları
+birleştirmek için insertRow kullanın. Eski yazma çağrıları otomatik olarak birleştirilmez.
 
-  Serial.println("\n==================================================");
-  Serial.println("📂 SABİT SATIR GÜNCELLEME (JSON KULLANMADAN)");
-  Serial.println("==================================================");
-  
-  // Baserow panelindeki 1 numaralı satırı günceller
-  if (baserow.updateNumber(1, "Ruzgar_Hizi", anlikRuzgar)) {
-    Serial.println("-> Başarılı: ID:1 olan satırdaki rüzgar hızı güncellendi.");
-  }
-  if (baserow.updateText(1, "Hava_Kalitesi", anlikDurum)) {
-    Serial.println("-> Başarılı: ID:1 olan satırdaki durum metni güncellendi.");
-  }
+readNumber("Alan", 1) / readText("Alan", 1), API listesindeki birinci kaydı okur.
+updateNumber(1, ...) ve readRow(1, ...), ID'si 1 olan kaydı kullanır. Bu ikisi
+aynı olmak zorunda değildir. Web arayüzünde filtreleme veya sıralama yaparsanız,
+görünen sıra API'nin varsayılan sırasıyla farklı olabilir. Yeni kodda gerçek ID kullanın.
+Eski okumalarda 0 veya negatif sıra, önceki davranış gibi 1 kabul edilir.
+Sayısal okumada hata -1.0; metinde HATA / KOLON_BULUNAMADI dönüşleri korunur.
+Gerçek veri -1 olabileceğinden lastError() kontrolü yapın veya readRow kullanın.
 
-  delay(2000);
+~~~cpp
+baserow.setReadCacheMs(250); // Yalnızca eski konumsal okumalara uygulanır.
+float n = baserow.readNumber("Sicaklik", 1);
+String s = baserow.readText("Durum", 1); // 250 ms içinde aynı satırsa yerelden.
+baserow.clearCache();
+baserow.setReadCacheMs(0); // Varsayılan: her okuma güncel veriyi ister.
+~~~
 
-  Serial.println("\n==================================================");
-  Serial.println("📂 VERİ OKUMA (JSON KULLANMADAN)");
-  Serial.println("==================================================");
+Önbellek yalnızca son okunan satırı tutar. Süre son dolumdan itibaren ölçülür;
+önbellekten okuma süreyi uzatmaz. Yazma girişiminde, bağlantı kapatılırken ve
+çevrimdışı okumalarda temizlenir. Dışarıdan yapılan değişiklikler TTL süresince
+gecikmeli görülebilir. readRow her zaman ağdan okur; önbelleği kullanmaz.
 
-  // 🎯 Baserow arayüzünde görünen 1. satırı direkt olarak okuyoruz
-  float ledEmri = baserow.readNumber("LED_Komut", 1);
-  if (ledEmri == 1.0) {
-    digitalWrite(LED_PIN, HIGH);
-    Serial.println("-> readNumber() Sonucu: LED AÇILDI.");
-  } else if (ledEmri == 0.0) {
-    digitalWrite(LED_PIN, LOW);
-    Serial.println("-> readNumber() Sonucu: LED KAPATILDI.");
-  }
+## Bağlantı ve tanılama
 
-  // 🎯 Baserow arayüzünde görünen 1. satırı direkt olarak okuyoruz
-  String havaDurumu = baserow.readText("Hava_Kalitesi", 1);
-  Serial.print("-> readText() Sonucu (Hava Durumu): ");
-  Serial.println(havaDurumu);
+- platform(): ESP32 veya ESP8266 döndürür.
+- setKeepAlive(false): Bağlantıyı her istek sonunda kapatır; karşılaştırma için kullanılabilir.
+- close(): Soketi kapatır ve önbelleği temizler. Sonraki çağrı yeniden bağlanır.
+- setTimeout(5000): HTTP okuma zaman aşımı, ESP32'de ayrıca bağlantı zaman aşımı.
+  DNS/TLS dahil toplam işlem süresinin kesin üst sınırı değildir.
+- setMaxResponseSize(16384): Okunan JSON için bayt sınırı; daha büyük satırlar için
+  kullanılabilir RAM'e göre artırın. JSON ayrıştırma ayrıca bellek kullanır.
+- lastHttpCode(): Son HTTP durum kodu; ulaşım hatasında negatif, istek yapılmadıysa 0.
+- lastError(): Başarıda boş metin. HTTP hata gövdeleri RAM tasarrufu için saklanmaz.
+- lastRequestMs(): Son ağ işleminin süresi; JSON işleme ve payload hazırlığı dahil değildir.
+- lastResponseBytes(): Başarıyla tüketilen son yanıt gövdesinin boyutu.
+- lastReadFromCache(): Son konumsal okuma önbellekten mi geldi?
 
-  Serial.println("==================================================");
-  delay(30000); // 30 saniye bekle
-}
-```
+GET bağlantı hatasında bir kez yeni bağlantıyla denenir. POST / PATCH otomatik
+tekrarlanmaz; yanıt kaybolsa bile sunucu yazmayı tamamlamış olabilir. Hatalı veya
+kısmi yanıt alınırsa bağlantı kapatılır. Bir örneği farklı FreeRTOS görevlerinden
+eşzamanlı kullanmayın; çağrıları sıraya koyun veya kilitleyin.
 
----
+## TLS
 
-## 🛠️ Teknik Fonksiyon Referansı (API Reference)
+Önceki sürümle uyumluluk için varsayılan setInsecure davranışı korunmuştur:
+HTTPS şifrelenir, fakat sunucunun kimliği doğrulanmaz. Bu bir hızlandırma değildir.
+Doğrulama için cihaz saatini senkronize edip setCACert(ROOT_CA_PEM) çağırın.
+PEM kütüphanede saklanır. setInsecure() yeniden doğrulamasız moda geçirir.
+Yalnızca https:// taban URL kabul edilir; token için düz HTTP kullanılmaz.
 
-### 📤 Veri Yazma ve Güncelleme
-- `bool insertNumber(String fieldName, float value);` -> Tablonun en altına yeni bir sayı satırı ekler.
-- `bool insertText(String fieldName, String text);` -> Tablonun en altına yeni bir metin satırı ekler.
-- `bool updateNumber(int rowId, String fieldName, float value);` -> Belirtilen `rowId` numaralı satırdaki sayı hücresini günceller.
-- `bool updateText(int rowId, String fieldName, String text);` -> Belirtilen `rowId` numaralı satırdaki metin hücresini günceller.
+## Doğrulama
 
-### 📥 Veri Okuma
-- `float readNumber(String fieldName, int rowNumber = 1);` -> Baserow'da görünen satır numarasına göre sayısal veya boolean veriyi okur (Hata durumunda `-1.0` döner).
-- `String readText(String fieldName, int rowNumber = 1);` -> Baserow'da görünen satır numarasına göre metinsel veriyi okur.
-
----
-
-## 📄 Lisans
-Bu proje [MIT](LICENSE) lisansı altında korunmaktadır. Özgürce kullanabilir, dağıtabilir ve çatallayabilirsiniz (fork).
-
+Derleme ve davranış testi sonuçları TEST-RESULTS.md dosyasındadır.
+Donanımda süre ölçümü için örnek her çağrının HTTP kodunu, milisaniyesini ve yanıt
+boyutunu seri porta yazar. Aynı WiFi ve tabloyla ilk çağrıyı ve sonraki çağrıları
+ayrı karşılaştırın. Bu pakette canlı Baserow hesabına veya fiziksel karta yazma yapılmamıştır.
